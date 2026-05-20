@@ -7034,6 +7034,7 @@ export type ProjectedChargeFilterUsage = {
   pricingUnitAmountCents?: Maybe<Scalars['BigInt']['output']>;
   pricingUnitProjectedAmountCents?: Maybe<Scalars['BigInt']['output']>;
   projectedAmountCents: Scalars['BigInt']['output'];
+  projectedPresentationBreakdowns?: Maybe<Array<PresentationBreakdownUsage>>;
   projectedUnits: Scalars['Float']['output'];
   units: Scalars['Float']['output'];
   values: Scalars['ChargeFilterValues']['output'];
@@ -7052,6 +7053,7 @@ export type ProjectedChargeUsage = {
   pricingUnitAmountCents?: Maybe<Scalars['BigInt']['output']>;
   pricingUnitProjectedAmountCents?: Maybe<Scalars['BigInt']['output']>;
   projectedAmountCents: Scalars['BigInt']['output'];
+  projectedPresentationBreakdowns?: Maybe<Array<PresentationBreakdownUsage>>;
   projectedUnits: Scalars['Float']['output'];
   units: Scalars['Float']['output'];
 };
@@ -7067,6 +7069,7 @@ export type ProjectedGroupedChargeUsage = {
   pricingUnitAmountCents?: Maybe<Scalars['BigInt']['output']>;
   pricingUnitProjectedAmountCents?: Maybe<Scalars['BigInt']['output']>;
   projectedAmountCents: Scalars['BigInt']['output'];
+  projectedPresentationBreakdowns?: Maybe<Array<PresentationBreakdownUsage>>;
   projectedUnits: Scalars['Float']['output'];
   units: Scalars['Float']['output'];
 };
