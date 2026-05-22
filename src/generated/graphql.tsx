@@ -10665,7 +10665,7 @@ export type CustomerPortalAvailablePlansQuery = { __typename?: 'Query', customer
 export type CustomerPortalSubscriptionsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CustomerPortalSubscriptionsQuery = { __typename?: 'Query', customerPortalSubscriptions: { __typename?: 'SubscriptionCollection', collection: Array<{ __typename?: 'Subscription', id: string, name?: string | null, plan: { __typename?: 'Plan', id: string, code: string, name: string, amountCents: any, amountCurrency: CurrencyEnum, interval: PlanInterval } }> } };
+export type CustomerPortalSubscriptionsQuery = { __typename?: 'Query', customerPortalSubscriptions: { __typename?: 'SubscriptionCollection', collection: Array<{ __typename?: 'Subscription', id: string, name?: string | null, status?: StatusTypeEnum | null, plan: { __typename?: 'Plan', id: string, code: string, name: string, amountCents: any, amountCurrency: CurrencyEnum, interval: PlanInterval } }> } };
 
 export type ChangeCustomerPortalSubscriptionPlanMutationVariables = Exact<{
   input: ChangeCustomerPortalSubscriptionPlanInput;
@@ -21834,6 +21834,7 @@ export const CustomerPortalSubscriptionsDocument = gql`
     collection {
       id
       name
+      status
       plan {
         id
         code

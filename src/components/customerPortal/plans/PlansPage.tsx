@@ -15,6 +15,7 @@ import { deserializeAmount } from '~/core/serializers/serializeAmount'
 import {
   CurrencyEnum,
   PlanInterval,
+  StatusTypeEnum,
   useChangeCustomerPortalSubscriptionPlanMutation,
   useCreateCustomerPortalSubscriptionMutation,
   useCustomerPortalAvailablePlansQuery,
@@ -41,6 +42,7 @@ gql`
       collection {
         id
         name
+        status
         plan {
           id
           code
@@ -174,7 +176,10 @@ const PlansPage = () => {
   const cancelDialogRef = useRef<WarningDialogRef>(null)
   const [pendingCancelSubId, setPendingCancelSubId] = useState<string | null>(null)
 
-  const activeSubs = subsData?.customerPortalSubscriptions?.collection ?? []
+  const allReturnedSubs = subsData?.customerPortalSubscriptions?.collection ?? []
+  // Lago returns ALL subscriptions including terminated; each plan switch creates
+  // a new record. Filter to only currently-active ones for "Current plan" badges.
+  const activeSubs = allReturnedSubs.filter((s) => s.status === StatusTypeEnum.Active)
   const allPlans = plansData?.customerPortalAvailablePlans ?? []
 
   // Group plans by product key (aistack, growth, memory, etc.)
