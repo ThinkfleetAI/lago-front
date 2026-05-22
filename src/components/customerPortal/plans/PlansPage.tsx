@@ -9,6 +9,7 @@ import useCustomerPortalTranslate from '~/components/customerPortal/common/useCu
 import { Button } from '~/components/designSystem/Button'
 import { Typography } from '~/components/designSystem/Typography'
 import { WarningDialog, WarningDialogRef } from '~/components/designSystem/WarningDialog'
+import { addToast } from '~/core/apolloClient'
 import { intlFormatNumber } from '~/core/formats/intlFormatNumber'
 import { deserializeAmount } from '~/core/serializers/serializeAmount'
 import {
@@ -120,13 +121,54 @@ const PlansPage = () => {
   })
 
   const [changePlan, { loading: changing }] = useChangeCustomerPortalSubscriptionPlanMutation({
-    onCompleted: () => refetchSubs(),
+    onCompleted: (data) => {
+      refetchSubs()
+      const planName = data.changeCustomerPortalSubscriptionPlan?.plan?.name
+      addToast({
+        severity: 'success',
+        message: planName
+          ? translate('text_lago_portal_plan_switched_to', { plan: planName })
+          : translate('text_lago_portal_plan_switched'),
+      })
+    },
+    onError: (err) =>
+      addToast({
+        severity: 'danger',
+        message: err.message || translate('text_lago_portal_plan_switch_failed'),
+      }),
   })
   const [createSubscription, { loading: creating }] = useCreateCustomerPortalSubscriptionMutation({
-    onCompleted: () => refetchSubs(),
+    onCompleted: (data) => {
+      refetchSubs()
+      const planName = data.createCustomerPortalSubscription?.plan?.name
+      addToast({
+        severity: 'success',
+        message: planName
+          ? translate('text_lago_portal_product_added', { plan: planName })
+          : translate('text_lago_portal_product_added_generic'),
+      })
+    },
+    onError: (err) =>
+      addToast({
+        severity: 'danger',
+        message: err.message || translate('text_lago_portal_add_product_failed'),
+      }),
   })
   const [terminateSubscription, { loading: terminating }] =
-    useTerminateCustomerPortalSubscriptionMutation({ onCompleted: () => refetchSubs() })
+    useTerminateCustomerPortalSubscriptionMutation({
+      onCompleted: () => {
+        refetchSubs()
+        addToast({
+          severity: 'success',
+          message: translate('text_lago_portal_subscription_cancelled'),
+        })
+      },
+      onError: (err) =>
+        addToast({
+          severity: 'danger',
+          message: err.message || translate('text_lago_portal_cancel_failed'),
+        }),
+    })
 
   const cancelDialogRef = useRef<WarningDialogRef>(null)
   const [pendingCancelSubId, setPendingCancelSubId] = useState<string | null>(null)

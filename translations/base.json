@@ -4102,5 +4102,13 @@
   "text_lago_portal_no_plans_available": "No plans are available for your account. Contact support if you need assistance.",
   "text_lago_portal_manage_plans_title": "Plans & Subscriptions",
   "text_lago_portal_manage_plans_caption": "Switch plans, add products to your account, or cancel a subscription.",
-  "text_lago_portal_view_plans_button": "View plans"
+  "text_lago_portal_view_plans_button": "View plans",
+  "text_lago_portal_plan_switched": "Plan switched successfully",
+  "text_lago_portal_plan_switched_to": "Switched to {{plan}}",
+  "text_lago_portal_plan_switch_failed": "Failed to switch plan",
+  "text_lago_portal_product_added": "Added {{plan}} to your account",
+  "text_lago_portal_product_added_generic": "Product added to your account",
+  "text_lago_portal_add_product_failed": "Failed to add product",
+  "text_lago_portal_subscription_cancelled": "Subscription cancelled",
+  "text_lago_portal_cancel_failed": "Failed to cancel subscription"
 }
