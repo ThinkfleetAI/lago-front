@@ -4091,5 +4091,16 @@
   "text_1778232548237tdgidv9off9": "Create a new quote",
   "text_1778232548237f1f1pja8esj": "Update a quote",
   "text_1778232548237p4cirr96hwe": "View quotes",
-  "text_177823254823762hkchuyv10": "Void a quote"
+  "text_177823254823762hkchuyv10": "Void a quote",
+  "text_lago_portal_plans_title": "Plans & Subscriptions",
+  "text_lago_portal_plans_intro": "Manage your active subscriptions and add new products to your account.",
+  "text_lago_portal_current_plan": "Current plan",
+  "text_lago_portal_switch_to_plan": "Switch to this plan",
+  "text_lago_portal_add_to_account": "Add to my account",
+  "text_lago_portal_cancel_plan": "Cancel subscription",
+  "text_lago_portal_confirm_cancel_subscription": "Are you sure you want to cancel this subscription? You will lose access to its features at the end of the current billing period.",
+  "text_lago_portal_no_plans_available": "No plans are available for your account. Contact support if you need assistance.",
+  "text_lago_portal_manage_plans_title": "Plans & Subscriptions",
+  "text_lago_portal_manage_plans_caption": "Switch plans, add products to your account, or cancel a subscription.",
+  "text_lago_portal_view_plans_button": "View plans"
 }
