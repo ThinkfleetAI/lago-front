@@ -37,13 +37,10 @@ export const makeBreakdownRows = (
   for (const b of breakdowns ?? []) {
     const presentationBy = (b.presentationBy ?? {}) as Record<string, unknown>
 
-    // Drop breakdowns where every key has a null/undefined value — those
-    // would render as a row of empty chips, which the QA team flagged as
-    // confusing. The parent row's units still cover those fees.
-    const hasAnyMeaningfulValue = Object.values(presentationBy).some(isMeaningfulPresentationValue)
-
-    if (!hasAnyMeaningfulValue) continue
-
+    // We KEEP breakdowns whose `presentationBy` has no meaningful values —
+    // the QA team wants those rendered as an empty name cell + the units.
+    // Per-value null filtering happens inside `BreakdownNameCell` so the chips
+    // stay clean while the row remains visible.
     const stableKey = JSON.stringify(
       Object.keys(presentationBy)
         .sort()

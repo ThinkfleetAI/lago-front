@@ -1,6 +1,10 @@
 import { AmountCentsCell } from '~/components/customers/usage/sections/AmountCentsCell'
 import { BreakdownNameCell } from '~/components/customers/usage/sections/BreakdownNameCell'
 import {
+  VIRTUALIZATION_THRESHOLD,
+  VirtualizedBreakdownRows,
+} from '~/components/customers/usage/sections/VirtualizedBreakdownRows'
+import {
   isBreakdownRow,
   makeBreakdownRows,
   PresentationBreakdownRow,
@@ -61,9 +65,23 @@ export const ChargeSummarySection = ({
   const pricingUnitShortName = usage?.charge.appliedPricingUnit?.pricingUnit?.shortName
   const chargeSummaryRow = buildChargeSummaryRow(usage)
 
-  const summaryData: Array<ChargeSummaryRow | PresentationBreakdownRow> = showProjected
+  // The projected tab has its own breakdown set (`projectedPresentationBreakdowns`)
+  // which lines up with the projected units/amount. Falling back to the current
+  // breakdowns here would show stale data on the projected tab.
+  const breakdownsForActiveTab = showProjected
+    ? (usage as ProjectedChargeUsage | undefined)?.projectedPresentationBreakdowns
+    : usage?.presentationBreakdowns
+
+  const breakdownRows = makeBreakdownRows('charge', breakdownsForActiveTab)
+  // For charges with 3000+ breakdowns the inline Table rendering bogs the
+  // drawer down (QA report). Above the virtualization threshold we drop the
+  // breakdowns from the Table and render them in a virtualized scrolling list
+  // below; the parent row stays in the Table so the headers/columns survive.
+  const shouldVirtualizeBreakdowns = breakdownRows.length > VIRTUALIZATION_THRESHOLD
+
+  const summaryData: Array<ChargeSummaryRow | PresentationBreakdownRow> = shouldVirtualizeBreakdowns
     ? [chargeSummaryRow]
-    : [chargeSummaryRow, ...makeBreakdownRows('charge', usage?.presentationBreakdowns)]
+    : [chargeSummaryRow, ...breakdownRows]
 
   return (
     <section className="mt-12 flex flex-col gap-4">
@@ -114,15 +132,14 @@ export const ChargeSummarySection = ({
                 )
               }
 
-              // Projected tab: use GraphQL values as-is. Current tab: when
-              // charge-level breakdowns exist, display their sum so the parent
-              // row is consistent with the listed breakdown rows below it.
+              // Show the breakdowns sum on either tab when breakdowns are
+              // present, so the parent row reconciles with the listed
+              // breakdown rows. Projected uses `projectedPresentationBreakdowns`.
               const rawUnits = showProjected ? row.projectedUnits : row.units
-              const hasBreakdowns = (usage?.presentationBreakdowns?.length ?? 0) > 0
-              const displayUnits =
-                !showProjected && hasBreakdowns
-                  ? sumBreakdownUnits(usage?.presentationBreakdowns)
-                  : rawUnits
+              const hasBreakdowns = (breakdownsForActiveTab?.length ?? 0) > 0
+              const displayUnits = hasBreakdowns
+                ? sumBreakdownUnits(breakdownsForActiveTab)
+                : rawUnits
 
               return (
                 <Typography variant="body" color="grey700">
@@ -154,6 +171,7 @@ export const ChargeSummarySection = ({
           },
         ]}
       />
+      {shouldVirtualizeBreakdowns && <VirtualizedBreakdownRows rows={breakdownRows} />}
     </section>
   )
 }

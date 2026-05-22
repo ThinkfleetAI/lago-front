@@ -12,7 +12,7 @@ import { Typography } from '~/components/designSystem/Typography'
 import { MixedCharge } from '~/components/subscriptions/SubscriptionCurrentUsageTable'
 import { composeChargeFilterDisplayName } from '~/core/formats/formatInvoiceItemsMap'
 import { LocaleEnum } from '~/core/translations'
-import { CurrencyEnum } from '~/generated/graphql'
+import { CurrencyEnum, ProjectedChargeFilterUsage, ProjectedChargeUsage } from '~/generated/graphql'
 import { TranslateFunc } from '~/hooks/core/useInternationalization'
 
 type FiltersOnlyTableProps = {
@@ -38,33 +38,40 @@ export const FiltersOnlyTable = ({
   const pricingUnitShortName = usage?.charge.appliedPricingUnit?.pricingUnit?.shortName
   const unitsKey = showProjected ? 'projectedUnits' : 'units'
 
+  // Projected tab uses `projectedPresentationBreakdowns` (added 2026-05) so
+  // breakdowns and parent units align with the projected total.
+  const breakdownsForFilter = (filter: {
+    presentationBreakdowns?: { presentationBy: unknown; units: string }[] | null
+    projectedPresentationBreakdowns?: { presentationBy: unknown; units: string }[] | null
+  }) =>
+    showProjected
+      ? (filter as ProjectedChargeFilterUsage).projectedPresentationBreakdowns
+      : filter.presentationBreakdowns
+
+  const chargeLevelBreakdowns = showProjected
+    ? (usage as ProjectedChargeUsage | undefined)?.projectedPresentationBreakdowns
+    : usage?.presentationBreakdowns
+
   return (
     <Table
       name="filters-table"
       containerSize={0}
       rowSize={!!pricingUnitShortName ? 72 : 48}
-      data={
-        showProjected
-          ? (usage?.filters || []).map((f) => ({
-              ...f,
-              id: f.id || NO_ID_FILTER_DEFAULT_VALUE,
-            }))
-          : [
-              ...(usage?.filters || []).flatMap((rawFilter) => {
-                const f = {
-                  ...rawFilter,
-                  // Table component expect all elements to have an ID
-                  id: rawFilter.id || NO_ID_FILTER_DEFAULT_VALUE,
-                }
+      data={[
+        ...(usage?.filters || []).flatMap((rawFilter) => {
+          const f = {
+            ...rawFilter,
+            // Table component expect all elements to have an ID
+            id: rawFilter.id || NO_ID_FILTER_DEFAULT_VALUE,
+          }
 
-                return [f, ...makeBreakdownRows(`filter-${f.id}`, f.presentationBreakdowns)]
-              }),
-              // Tail breakdowns for fees on this charge that are not tied to a
-              // filter (backend builder excludes filter-related fees from
-              // ChargeUsage.presentationBreakdowns).
-              ...makeBreakdownRows('charge', usage?.presentationBreakdowns),
-            ]
-      }
+          return [f, ...makeBreakdownRows(`filter-${f.id}`, breakdownsForFilter(f))]
+        }),
+        // Tail breakdowns for fees on this charge that are not tied to a
+        // filter (backend builder excludes filter-related fees from the charge
+        // level `presentationBreakdowns` field).
+        ...makeBreakdownRows('charge', chargeLevelBreakdowns),
+      ]}
       columns={[
         {
           key: 'invoiceDisplayName',
@@ -102,14 +109,14 @@ export const FiltersOnlyTable = ({
               )
             }
 
-            // Projected tab: use GraphQL values as-is (breakdowns are hidden).
-            // Current tab: when breakdowns exist, display their sum so the
-            // parent stays consistent with the rows below it.
-            const hasBreakdowns = (row.presentationBreakdowns?.length ?? 0) > 0
-            const displayUnits =
-              !showProjected && hasBreakdowns
-                ? sumBreakdownUnits(row.presentationBreakdowns)
-                : (row as MixedCharge)[unitsKey]
+            // Show breakdowns sum on both tabs so the parent reconciles with
+            // the listed breakdown rows below it. Projected uses
+            // `projectedPresentationBreakdowns`.
+            const breakdowns = breakdownsForFilter(row)
+            const hasBreakdowns = (breakdowns?.length ?? 0) > 0
+            const displayUnits = hasBreakdowns
+              ? sumBreakdownUnits(breakdowns)
+              : (row as MixedCharge)[unitsKey]
 
             return (
               <Typography variant="body" color="grey700">

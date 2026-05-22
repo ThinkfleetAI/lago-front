@@ -129,20 +129,24 @@ describe('SubscriptionUsageDetailDrawer helpers', () => {
     })
 
     describe('GIVEN an empty presentationBy object', () => {
-      it('WHEN aggregating THEN should drop the row (no meaningful values to render)', () => {
+      it('WHEN aggregating THEN should keep the row (rendered as an empty name + units)', () => {
         const result = makeBreakdownRows('p', [{ presentationBy: {}, units: '8' }])
 
-        expect(result).toHaveLength(0)
+        expect(result).toHaveLength(1)
+        expect(result[0].presentationBy).toEqual({})
+        expect(result[0].breakdownUnits).toBe('8')
       })
     })
 
     describe('GIVEN a presentationBy object where every value is null/undefined', () => {
-      it('WHEN aggregating THEN should drop the row', () => {
+      it('WHEN aggregating THEN should keep the row (chips are filtered per-value in the cell)', () => {
         const result = makeBreakdownRows('p', [
           { presentationBy: { region: null, tier: undefined }, units: '8' },
         ])
 
-        expect(result).toHaveLength(0)
+        expect(result).toHaveLength(1)
+        expect(result[0].presentationBy).toEqual({ region: null, tier: undefined })
+        expect(result[0].breakdownUnits).toBe('8')
       })
     })
 
