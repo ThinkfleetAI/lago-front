@@ -1,5 +1,6 @@
 import {
   CUSTOMER_PORTAL_CUSTOMER_EDIT_INFORMATION_ROUTE,
+  CUSTOMER_PORTAL_PLANS_ROUTE,
   CUSTOMER_PORTAL_ROUTE,
   CUSTOMER_PORTAL_USAGE_ROUTE,
   CUSTOMER_PORTAL_WALLET_ROUTE,
@@ -14,6 +15,7 @@ const CustomerPortalSections = lazyLoad(
 )
 const UsagePage = lazyLoad(() => import('~/components/customerPortal/usage/UsagePage'))
 const WalletPage = lazyLoad(() => import('~/components/customerPortal/wallet/WalletPage'))
+const PlansPage = lazyLoad(() => import('~/components/customerPortal/plans/PlansPage'))
 const CustomerInformationPage = lazyLoad(
   () => import('~/components/customerPortal/customerInformation/CustomerInformationPage'),
 )
@@ -30,6 +32,10 @@ export const customerPortalChildrenRoutes: CustomRouteObject[] = [
   {
     path: [CUSTOMER_PORTAL_WALLET_ROUTE],
     element: <WalletPage />,
+  },
+  {
+    path: [CUSTOMER_PORTAL_PLANS_ROUTE],
+    element: <PlansPage />,
   },
   {
     path: [CUSTOMER_PORTAL_CUSTOMER_EDIT_INFORMATION_ROUTE],

@@ -3,6 +3,7 @@ import { generatePath, useParams } from 'react-router-dom'
 import { useLocation, useNavigate } from '~/core/router'
 import {
   CUSTOMER_PORTAL_CUSTOMER_EDIT_INFORMATION_ROUTE,
+  CUSTOMER_PORTAL_PLANS_ROUTE,
   CUSTOMER_PORTAL_ROUTE,
   CUSTOMER_PORTAL_USAGE_ROUTE,
   CUSTOMER_PORTAL_WALLET_ROUTE,
@@ -40,12 +41,20 @@ const useCustomerPortalNavigation = () => {
       }),
     )
 
+  const viewPlans = () =>
+    navigate(
+      generatePath(CUSTOMER_PORTAL_PLANS_ROUTE, {
+        token: token as string,
+      }),
+    )
+
   return {
     pathname,
     goHome,
     viewSubscription,
     viewWallet,
     viewEditInformation,
+    viewPlans,
   }
 }
 
