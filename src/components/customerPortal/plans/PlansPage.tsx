@@ -58,6 +58,7 @@ gql`
   ) {
     changeCustomerPortalSubscriptionPlan(input: $input) {
       id
+      externalId
       plan {
         id
         code
@@ -198,16 +199,16 @@ const PlansPage = () => {
     return set
   }, [activeSubs])
 
-  const handleChange = (subId: string, planCode: string) => {
-    changePlan({ variables: { input: { subscriptionId: subId, planCode } } })
+  const handleChange = (planCode: string) => {
+    changePlan({ variables: { input: { planCode } } })
   }
 
   const handleAdd = (planCode: string) => {
     createSubscription({ variables: { input: { planCode } } })
   }
 
-  const handleTerminate = (subId: string) => {
-    setPendingCancelSubId(subId)
+  const handleTerminate = (productKey: string) => {
+    setPendingCancelSubId(productKey)
     cancelDialogRef.current?.openDialog()
   }
 
@@ -249,7 +250,7 @@ const PlansPage = () => {
                   variant="quaternary"
                   danger
                   disabled={terminating}
-                  onClick={() => handleTerminate(currentForProduct.subId)}
+                  onClick={() => handleTerminate(productKey)}
                 >
                   {translate('text_lago_portal_cancel_plan')}
                 </Button>
@@ -287,7 +288,7 @@ const PlansPage = () => {
                       <Button
                         variant="primary"
                         disabled={changing}
-                        onClick={() => handleChange(currentForProduct.subId, plan.code)}
+                        onClick={() => handleChange(plan.code)}
                       >
                         {translate('text_lago_portal_switch_to_plan')}
                       </Button>
@@ -322,7 +323,7 @@ const PlansPage = () => {
         onContinue={() => {
           if (pendingCancelSubId) {
             return terminateSubscription({
-              variables: { input: { subscriptionId: pendingCancelSubId } },
+              variables: { input: { productKey: pendingCancelSubId } },
             })
           }
         }}
