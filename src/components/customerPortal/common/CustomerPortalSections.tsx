@@ -18,7 +18,8 @@ const CustomerPortalSections = () => {
 
   const { data: portalData } = useCustomerPortalData()
 
-  const { viewWallet, viewSubscription, viewEditInformation, viewPlans } = useCustomerPortalNavigation()
+  const { viewWallet, viewSubscription, viewEditInformation, viewPlans } =
+    useCustomerPortalNavigation()
 
   const showPoweredBy = !portalData?.customerPortalOrganization?.premiumIntegrations?.includes(
     PremiumIntegrationTypeEnum.RemoveBrandingWatermark,

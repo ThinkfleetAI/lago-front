@@ -1,20 +1,23 @@
 import { gql } from '@apollo/client'
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
+import useCustomerPortalNavigation from '~/components/customerPortal/common/hooks/useCustomerPortalNavigation'
 import PageTitle from '~/components/customerPortal/common/PageTitle'
 import SectionError from '~/components/customerPortal/common/SectionError'
 import { LoaderUsageSection } from '~/components/customerPortal/common/SectionLoading'
 import useCustomerPortalTranslate from '~/components/customerPortal/common/useCustomerPortalTranslate'
 import { Button } from '~/components/designSystem/Button'
 import { Typography } from '~/components/designSystem/Typography'
+import { WarningDialog, WarningDialogRef } from '~/components/designSystem/WarningDialog'
 import { intlFormatNumber } from '~/core/formats/intlFormatNumber'
 import { deserializeAmount } from '~/core/serializers/serializeAmount'
 import {
+  CurrencyEnum,
   PlanInterval,
-  useCustomerPortalAvailablePlansQuery,
-  useCustomerPortalSubscriptionsQuery,
   useChangeCustomerPortalSubscriptionPlanMutation,
   useCreateCustomerPortalSubscriptionMutation,
+  useCustomerPortalAvailablePlansQuery,
+  useCustomerPortalSubscriptionsQuery,
   useTerminateCustomerPortalSubscriptionMutation,
 } from '~/generated/graphql'
 
@@ -37,22 +40,39 @@ gql`
       collection {
         id
         name
-        plan { id code name amountCents amountCurrency interval }
+        plan {
+          id
+          code
+          name
+          amountCents
+          amountCurrency
+          interval
+        }
       }
     }
   }
 
-  mutation changeCustomerPortalSubscriptionPlan($input: ChangeCustomerPortalSubscriptionPlanInput!) {
+  mutation changeCustomerPortalSubscriptionPlan(
+    $input: ChangeCustomerPortalSubscriptionPlanInput!
+  ) {
     changeCustomerPortalSubscriptionPlan(input: $input) {
       id
-      plan { id code name }
+      plan {
+        id
+        code
+        name
+      }
     }
   }
 
   mutation createCustomerPortalSubscription($input: CreateCustomerPortalSubscriptionInput!) {
     createCustomerPortalSubscription(input: $input) {
       id
-      plan { id code name }
+      plan {
+        id
+        code
+        name
+      }
     }
   }
 
@@ -66,14 +86,22 @@ gql`
 
 const extractProductKey = (planCode: string): string => planCode.split('-')[0] || 'other'
 
-const formatPrice = (amountCents: number, currency: string, interval: PlanInterval): string => {
-  const amount = deserializeAmount(amountCents, currency as any)
-  const formatted = intlFormatNumber(amount, { currencyDisplay: 'symbol', currency: currency as any })
+const formatPrice = (
+  amountCents: number,
+  currency: CurrencyEnum,
+  interval: PlanInterval,
+): string => {
+  const amount = deserializeAmount(amountCents, currency)
+  const formatted = intlFormatNumber(amount, {
+    currencyDisplay: 'symbol',
+    currency,
+  })
   return `${formatted}/${interval}`
 }
 
 const PlansPage = () => {
   const { translate } = useCustomerPortalTranslate()
+  const { goHome } = useCustomerPortalNavigation()
 
   const {
     data: subsData,
@@ -100,6 +128,9 @@ const PlansPage = () => {
   const [terminateSubscription, { loading: terminating }] =
     useTerminateCustomerPortalSubscriptionMutation({ onCompleted: () => refetchSubs() })
 
+  const cancelDialogRef = useRef<WarningDialogRef>(null)
+  const [pendingCancelSubId, setPendingCancelSubId] = useState<string | null>(null)
+
   const activeSubs = subsData?.customerPortalSubscriptions?.collection ?? []
   const allPlans = plansData?.customerPortalAvailablePlans ?? []
 
@@ -116,7 +147,7 @@ const PlansPage = () => {
 
   // Map subscribed plan codes to know which to mark as current
   const subscribedProducts = useMemo(() => {
-    const set = new Map<string, { subId: string, planCode: string }>()
+    const set = new Map<string, { subId: string; planCode: string }>()
     for (const s of activeSubs) {
       if (s.plan?.code) {
         set.set(extractProductKey(s.plan.code), { subId: s.id, planCode: s.plan.code })
@@ -134,9 +165,8 @@ const PlansPage = () => {
   }
 
   const handleTerminate = (subId: string) => {
-    if (window.confirm(translate('text_lago_portal_confirm_cancel_subscription'))) {
-      terminateSubscription({ variables: { input: { subscriptionId: subId } } })
-    }
+    setPendingCancelSubId(subId)
+    cancelDialogRef.current?.openDialog()
   }
 
   if (subsError || plansError) {
@@ -156,7 +186,7 @@ const PlansPage = () => {
 
   return (
     <div className="flex flex-col gap-12">
-      <PageTitle title={translate('text_lago_portal_plans_title')} />
+      <PageTitle title={translate('text_lago_portal_plans_title')} goHome={goHome} />
 
       <Typography variant="bodyHl" color="grey700">
         {translate('text_lago_portal_plans_intro')}
@@ -192,7 +222,7 @@ const PlansPage = () => {
                   <div
                     key={plan.id}
                     className={`flex flex-col gap-3 rounded-lg border p-4 ${
-                      isCurrent ? 'border-blue-600 bg-blue-50' : 'border-grey-300'
+                      isCurrent ? 'bg-blue-50 border-blue-600' : 'border-grey-300'
                     }`}
                   >
                     <Typography variant="bodyHl" color="grey700">
@@ -241,6 +271,20 @@ const PlansPage = () => {
           {translate('text_lago_portal_no_plans_available')}
         </Typography>
       )}
+
+      <WarningDialog
+        ref={cancelDialogRef}
+        title={translate('text_lago_portal_cancel_plan')}
+        description={translate('text_lago_portal_confirm_cancel_subscription')}
+        continueText={translate('text_lago_portal_cancel_plan')}
+        onContinue={() => {
+          if (pendingCancelSubId) {
+            return terminateSubscription({
+              variables: { input: { subscriptionId: pendingCancelSubId } },
+            })
+          }
+        }}
+      />
     </div>
   )
 }
