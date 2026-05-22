@@ -4110,5 +4110,6 @@
   "text_lago_portal_product_added_generic": "Product added to your account",
   "text_lago_portal_add_product_failed": "Failed to add product",
   "text_lago_portal_subscription_cancelled": "Subscription cancelled",
-  "text_lago_portal_cancel_failed": "Failed to cancel subscription"
+  "text_lago_portal_cancel_failed": "Failed to cancel subscription",
+  "text_lago_portal_bundle_badge": "Bundle"
 }

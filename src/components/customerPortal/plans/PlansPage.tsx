@@ -34,6 +34,10 @@ gql`
       amountCurrency
       interval
       trialPeriod
+      metadata {
+        key
+        value
+      }
     }
   }
 
@@ -89,6 +93,15 @@ gql`
 `
 
 const extractProductKey = (planCode: string): string => planCode.split('-')[0] || 'other'
+
+const getMetadataValue = (
+  metadata: ReadonlyArray<{ key: string; value?: string | null }> | null | undefined,
+  key: string,
+): string | undefined => metadata?.find((m) => m.key === key)?.value ?? undefined
+
+const isBundle = (
+  metadata: ReadonlyArray<{ key: string; value?: string | null }> | null | undefined,
+): boolean => getMetadataValue(metadata, 'bundle') === 'true'
 
 const formatPrice = (
   amountCents: number,
@@ -273,9 +286,16 @@ const PlansPage = () => {
                       isCurrent ? 'bg-blue-50 border-blue-600' : 'border-grey-300'
                     }`}
                   >
-                    <Typography variant="bodyHl" color="grey700">
-                      {plan.name}
-                    </Typography>
+                    <div className="flex items-center gap-2">
+                      <Typography variant="bodyHl" color="grey700">
+                        {plan.name}
+                      </Typography>
+                      {isBundle(plan.metadata) && (
+                        <span className="bg-orange-100 text-orange-700 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
+                          {translate('text_lago_portal_bundle_badge')}
+                        </span>
+                      )}
+                    </div>
                     <Typography variant="body" color="grey600">
                       {formatPrice(plan.amountCents, plan.amountCurrency, plan.interval)}
                     </Typography>

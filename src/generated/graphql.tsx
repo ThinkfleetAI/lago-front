@@ -10660,7 +10660,7 @@ export type CustomerPortalAvailablePlansQueryVariables = Exact<{
 }>;
 
 
-export type CustomerPortalAvailablePlansQuery = { __typename?: 'Query', customerPortalAvailablePlans: Array<{ __typename?: 'Plan', id: string, code: string, name: string, description?: string | null, amountCents: any, amountCurrency: CurrencyEnum, interval: PlanInterval, trialPeriod?: number | null }> };
+export type CustomerPortalAvailablePlansQuery = { __typename?: 'Query', customerPortalAvailablePlans: Array<{ __typename?: 'Plan', id: string, code: string, name: string, description?: string | null, amountCents: any, amountCurrency: CurrencyEnum, interval: PlanInterval, trialPeriod?: number | null, metadata?: Array<{ __typename?: 'ItemMetadata', key: string, value?: string | null }> | null }> };
 
 export type CustomerPortalSubscriptionsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -21788,6 +21788,10 @@ export const CustomerPortalAvailablePlansDocument = gql`
     amountCurrency
     interval
     trialPeriod
+    metadata {
+      key
+      value
+    }
   }
 }
     `;
