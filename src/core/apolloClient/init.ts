@@ -35,6 +35,10 @@ const AUTH_ERRORS = [
   LagoApiError.Unauthorized,
 ]
 
+// One-shot guard so concurrent expired-JWT errors (the portal fires 5+
+// queries on load, all 401 at once) only trigger a single redirect.
+let portalExpiryRedirected = false
+
 const TIMEOUT = 300000 // 5 minutes timeout
 const { apiUrl, appVersion } = envGlobalVar()
 
@@ -161,6 +165,26 @@ export const initializeApolloClient = async () => {
             `${CUSTOMER_PORTAL_ROUTE}/*`,
             window.location.pathname,
           )
+
+          // When a customer-portal JWT expires, bounce the user back to the
+          // host app via the ?return_to= query param. The host app's
+          // /billing page reads ?refresh=1 and replaces the tab with a
+          // fresh portal URL, so the stale tab self-heals without the
+          // user seeing a broken portal. portalExpiryRedirected guards
+          // against firing for every in-flight query (5+ on portal load).
+          if (
+            isCustomerPortal &&
+            extensions?.code === LagoApiError.ExpiredJwtToken &&
+            !portalExpiryRedirected
+          ) {
+            const returnTo = new URLSearchParams(window.location.search).get('return_to')
+            if (returnTo) {
+              portalExpiryRedirected = true
+              const sep = returnTo.includes('?') ? '&' : '?'
+              window.location.href = `${returnTo}${sep}refresh=1`
+              return
+            }
+          }
 
           if (!isCustomerPortal && onAuthError) {
             onAuthError()
