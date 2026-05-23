@@ -69,10 +69,22 @@ export const initializeApolloClient = async () => {
     const customerPortalToken = getItemFromLS(CUSTOMER_PORTAL_TOKEN_LS_KEY)
     const currentOrganizationId = getCurrentOrganizationId()
 
+    // The customer portal authenticates via the `customer-portal-token`
+    // header, NOT the admin Bearer JWT. If a user has logged into Lago
+    // admin in this browser, the admin JWT sits in localStorage; sending
+    // it on portal requests means an expired admin JWT (12h TTL) causes
+    // GraphQL to return `expired_jwt_token` on the portal — even though
+    // the portal session itself is fine. Skip the Bearer for portal routes.
+    const isCustomerPortalRoute = !!matchPath(
+      `${CUSTOMER_PORTAL_ROUTE}/*`,
+      window.location.pathname,
+    )
+    const shouldSendBearer = !!token && !isCustomerPortalRoute
+
     operation.setContext({
       headers: {
         ...headers,
-        ...(!token ? {} : { authorization: `Bearer ${token}` }),
+        ...(shouldSendBearer ? { authorization: `Bearer ${token}` } : {}),
         ...(!customerPortalToken ? {} : { 'customer-portal-token': customerPortalToken }),
         'x-lago-organization': currentOrganizationId,
       },
