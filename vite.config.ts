@@ -16,9 +16,9 @@ const icons: Record<string, string> = {
 }
 
 const titles: Record<string, string> = {
-  development: 'Lago - Local',
-  production: 'Lago',
-  staging: 'Lago - Cloud',
+  development: 'Billing - Local',
+  production: 'Billing',
+  staging: 'Billing - Staging',
 }
 
 // Local dev only: when running inside a worktree instance (see scripts/lago-worktree.sh),
