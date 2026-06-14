@@ -1,16 +1,18 @@
 import { ApolloClient, ApolloError } from '@apollo/client'
 import { captureException } from '@sentry/react'
 import { ConditionalWrapper, Icon } from 'lago-design-system'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { Avatar } from '~/components/designSystem/Avatar'
 import { Button } from '~/components/designSystem/Button'
+import { DialogRef } from '~/components/designSystem/Dialog'
 import { Popper } from '~/components/designSystem/Popper'
 import { Skeleton } from '~/components/designSystem/Skeleton'
 import { Tooltip } from '~/components/designSystem/Tooltip'
 import { Typography } from '~/components/designSystem/Typography'
 import { VerticalMenuSectionTitle } from '~/components/designSystem/VerticalMenu'
+import { CreateOrganizationDialog } from '~/components/organizations/CreateOrganizationDialog'
 import { addToast, logOut, switchCurrentOrganization } from '~/core/apolloClient'
 import { authenticationMethodsMapping } from '~/core/constants/authenticationMethodsMapping'
 import { HOME_ROUTE, useNavigate } from '~/core/router'
@@ -61,6 +63,7 @@ export const OrganizationSwitcher = ({
   const navigate = useNavigate()
   const { organizationSlug } = useParams<{ organizationSlug: string }>()
   const [isSwitchingOrg, setIsSwitchingOrg] = useState(false)
+  const createOrgDialogRef = useRef<DialogRef>(null)
 
   const organizationList: OrganizationFromMembership[] | undefined = currentUser?.memberships.map(
     (membership) => membership.organization,
@@ -266,6 +269,22 @@ export const OrganizationSwitcher = ({
               </div>
             )}
 
+            <div className="border-t border-grey-200 p-2">
+              <Button
+                variant="quaternary"
+                align="left"
+                size="small"
+                startIcon="plus"
+                fullWidth
+                onClick={() => {
+                  createOrgDialogRef.current?.openDialog()
+                  closePopper()
+                }}
+              >
+                Create organization
+              </Button>
+            </div>
+
             <div className="flex items-center justify-between p-2 first-child:text-left">
               <Button
                 variant="quaternary"
@@ -296,6 +315,8 @@ export const OrganizationSwitcher = ({
           </MenuPopper>
         )}
       </Popper>
+
+      <CreateOrganizationDialog ref={createOrgDialogRef} />
     </NavLayout.NavStickyElementContainer>
   )
 }
