@@ -1,4 +1,4 @@
-import { gql, useApolloClient } from '@apollo/client'
+import { gql, useApolloClient, useMutation } from '@apollo/client'
 import { useFormik } from 'formik'
 import { forwardRef } from 'react'
 import { object, string } from 'yup'
@@ -8,14 +8,14 @@ import { Dialog, DialogRef } from '~/components/designSystem/Dialog'
 import { TextInputField } from '~/components/form'
 import { addToast, hasDefinedGQLError, switchCurrentOrganization } from '~/core/apolloClient'
 import { HOME_ROUTE, useNavigate } from '~/core/router'
-// NOTE: `useCreateOrganizationMutation` is produced by graphql-codegen from the
-// `gql` block below once the matching `createOrganization` mutation exists in
-// the API schema (see ThinkfleetAI/lago-api feat/create-organization-mutation).
-// Run `pnpm codegen` after deploying that API change.
-import { LagoApiError, useCreateOrganizationMutation } from '~/generated/graphql'
+import { LagoApiError } from '~/generated/graphql'
 import { useInternationalization } from '~/hooks/core/useInternationalization'
 
-gql`
+// Inline document via Apollo `useMutation` rather than a codegen-generated hook:
+// the build consumes the committed `generated/graphql.tsx` and does not run
+// codegen, so a generated `useCreateOrganizationMutation` wouldn't exist yet.
+// Matches the `createOrganization` mutation in ThinkfleetAI/lago-api.
+const CREATE_ORGANIZATION = gql`
   mutation createOrganization($name: String!) {
     createOrganization(name: $name) {
       id
@@ -31,9 +31,11 @@ export const CreateOrganizationDialog = forwardRef<DialogRef>((_props, ref) => {
   const apolloClient = useApolloClient()
   const navigate = useNavigate()
 
-  const [createOrganization] = useCreateOrganizationMutation({
+  const [createOrganization] = useMutation(CREATE_ORGANIZATION, {
     context: { silentErrorCodes: [LagoApiError.UnprocessableEntity] },
-    onCompleted: async ({ createOrganization: organization }) => {
+    onCompleted: async (data) => {
+      const organization = data?.createOrganization
+
       if (!organization?.id) return
 
       addToast({
