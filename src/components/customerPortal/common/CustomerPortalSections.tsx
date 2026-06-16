@@ -1,3 +1,4 @@
+import AgreementGate from '~/components/customerPortal/common/AgreementGate'
 import { useCustomerPortalData } from '~/components/customerPortal/common/hooks/useCustomerPortalData'
 import useCustomerPortalNavigation from '~/components/customerPortal/common/hooks/useCustomerPortalNavigation'
 import useCustomerPortalTranslate from '~/components/customerPortal/common/useCustomerPortalTranslate'
@@ -24,6 +25,15 @@ const CustomerPortalSections = () => {
   const showPoweredBy = !portalData?.customerPortalOrganization?.premiumIntegrations?.includes(
     PremiumIntegrationTypeEnum.RemoveBrandingWatermark,
   )
+
+  // White-label / SDK customers must sign the MSA before anything else is shown.
+  if (portalData?.customerPortalUser?.mustSignAgreement) {
+    return (
+      <div className="flex flex-col gap-12" data-test={CUSTOMER_PORTAL_SECTIONS_TEST_ID}>
+        <AgreementGate signingUrl={portalData.customerPortalUser.agreementSigningUrl} />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-12" data-test={CUSTOMER_PORTAL_SECTIONS_TEST_ID}>
