@@ -18,8 +18,6 @@ gql`
       }
       applicableTimezone
       premium
-      mustSignAgreement
-      agreementSigningUrl
       customerType
       name
       firstname
