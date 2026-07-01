@@ -104,6 +104,9 @@ const buildDefaultValues = (
   taxes: plan?.taxes || [],
   invoiceDisplayName: plan?.invoiceDisplayName || undefined,
   payInAdvance: plan?.payInAdvance || false,
+  // Default new plans to visible in the customer portal; false hides them
+  // from self-serve while keeping them operator-assignable.
+  selfServe: plan?.selfServe ?? true,
   amountCents: isNaN(plan?.amountCents)
     ? '0'
     : String(deserializeAmount(plan?.amountCents || 0, initialCurrency)),
