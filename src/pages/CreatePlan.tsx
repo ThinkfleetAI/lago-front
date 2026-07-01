@@ -81,6 +81,7 @@ gql`
     description
     interval
     payInAdvance
+    selfServe
     invoiceDisplayName
     amountCents
     amountCurrency

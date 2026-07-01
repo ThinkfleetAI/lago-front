@@ -33,6 +33,7 @@ gql`
     description
     interval
     name
+    selfServe
     taxes {
       ...TaxForPlanSettingsSection
     }
@@ -171,6 +172,15 @@ export const PlanSettingsSection = ({
             label={translate('text_6661fc17337de3591e29e3d1')}
             description={translate('text_6661fc17337de3591e29e3d3')}
             options={intervalOptions}
+          />
+        )}
+      </form.AppField>
+
+      <form.AppField name="selfServe">
+        {(field) => (
+          <field.SwitchField
+            label="Show in customer portal"
+            subLabel="When off, this plan is hidden from the self-serve plan list in the customer portal but can still be assigned to customers by an operator (e.g. enterprise / white-label)."
           />
         )}
       </form.AppField>
