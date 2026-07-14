@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client'
+import { Icon } from 'lago-design-system'
 import { useMemo, useRef, useState } from 'react'
 
 import useCustomerPortalNavigation from '~/components/customerPortal/common/hooks/useCustomerPortalNavigation'
@@ -7,9 +8,11 @@ import SectionError from '~/components/customerPortal/common/SectionError'
 import { LoaderUsageSection } from '~/components/customerPortal/common/SectionLoading'
 import useCustomerPortalTranslate from '~/components/customerPortal/common/useCustomerPortalTranslate'
 import { Button } from '~/components/designSystem/Button'
+import { Chip } from '~/components/designSystem/Chip'
 import { Typography } from '~/components/designSystem/Typography'
 import { WarningDialog, WarningDialogRef } from '~/components/designSystem/WarningDialog'
 import { addToast } from '~/core/apolloClient'
+import { getIntervalTranslationKey } from '~/core/constants/form'
 import { intlFormatNumber } from '~/core/formats/intlFormatNumber'
 import { deserializeAmount } from '~/core/serializers/serializeAmount'
 import {
@@ -22,6 +25,7 @@ import {
   useCustomerPortalSubscriptionsQuery,
   useTerminateCustomerPortalSubscriptionMutation,
 } from '~/generated/graphql'
+import { tw } from '~/styles/utils'
 
 gql`
   query customerPortalAvailablePlans($productKey: String, $excludeCurrent: Boolean) {
@@ -103,17 +107,58 @@ const isBundle = (
   metadata: ReadonlyArray<{ key: string; value?: string | null }> | null | undefined,
 ): boolean => getMetadataValue(metadata, 'bundle') === 'true'
 
-const formatPrice = (
-  amountCents: number,
-  currency: CurrencyEnum,
-  interval: PlanInterval,
-): string => {
+const formatPrice = (amountCents: number, currency: CurrencyEnum): string => {
   const amount = deserializeAmount(amountCents, currency)
-  const formatted = intlFormatNumber(amount, {
+
+  return intlFormatNumber(amount, {
     currencyDisplay: 'symbol',
     currency,
+    // Whole amounts read cleaner without trailing cents ($19 rather than $19.00)
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
   })
-  return `${formatted}/${interval}`
+}
+
+const INTERVAL_ORDER: PlanInterval[] = [
+  PlanInterval.Weekly,
+  PlanInterval.Monthly,
+  PlanInterval.Quarterly,
+  PlanInterval.Semiannual,
+  PlanInterval.Yearly,
+]
+
+// Interval is already conveyed by the toggle, so a name like "Memory Starter (Annual)"
+// only repeats it.
+const formatPlanName = (name: string): string =>
+  name.replace(/\s*\((annual|annually|yearly|monthly|weekly|quarterly)\)\s*$/i, '').trim() || name
+
+const formatProductName = (productKey: string): string =>
+  productKey.charAt(0).toUpperCase() + productKey.slice(1)
+
+// Plan descriptions are written as a lead-in followed by a comma-separated list of
+// what the tier includes ("Scaling teams — more projects, prediction overage, SSO").
+// Split that tail into checkmark bullets when it looks like a list; otherwise the
+// description renders as a plain paragraph.
+const parseDescription = (
+  description: string,
+): { lead: string; features: string[] } => {
+  const [head, ...rest] = description.split(/\s+[—–-]\s+/)
+
+  if (!rest.length) {
+    return { lead: description, features: [] }
+  }
+
+  const features = rest
+    .join(' - ')
+    .replace(/\.$/, '')
+    .split(',')
+    .map((feature) => feature.trim())
+    .filter(Boolean)
+
+  if (features.length < 2) {
+    return { lead: description, features: [] }
+  }
+
+  return { lead: head.trim(), features }
 }
 
 const PlansPage = () => {
@@ -188,6 +233,9 @@ const PlansPage = () => {
 
   const cancelDialogRef = useRef<WarningDialogRef>(null)
   const [pendingCancelSubId, setPendingCancelSubId] = useState<string | null>(null)
+  // Per-product override of the billing interval shown in the grid; unset products
+  // fall back to the interval of their active plan (or the shortest one available).
+  const [selectedIntervals, setSelectedIntervals] = useState<Record<string, PlanInterval>>({})
 
   const allReturnedSubs = subsData?.customerPortalSubscriptions?.collection ?? []
   // Lago returns ALL subscriptions including terminated; each plan switch creates
@@ -208,10 +256,19 @@ const PlansPage = () => {
 
   // Map subscribed plan codes to know which to mark as current
   const subscribedProducts = useMemo(() => {
-    const set = new Map<string, { subId: string; planCode: string }>()
+    const set = new Map<
+      string,
+      { subId: string; planCode: string; planName?: string | null; interval?: PlanInterval }
+    >()
+
     for (const s of activeSubs) {
       if (s.plan?.code) {
-        set.set(extractProductKey(s.plan.code), { subId: s.id, planCode: s.plan.code })
+        set.set(extractProductKey(s.plan.code), {
+          subId: s.id,
+          planCode: s.plan.code,
+          planName: s.plan.name,
+          interval: s.plan.interval,
+        })
       }
     }
     return set
@@ -246,91 +303,192 @@ const PlansPage = () => {
   const productKeys = Object.keys(plansByProduct).sort()
 
   return (
-    <div className="flex flex-col gap-12">
-      <PageTitle title={translate('text_lago_portal_plans_title')} goHome={goHome} />
+    <div className="flex flex-col gap-8">
+      <div>
+        <PageTitle title={translate('text_lago_portal_plans_title')} goHome={goHome} />
 
-      <Typography variant="bodyHl" color="grey700">
-        {translate('text_lago_portal_plans_intro')}
-      </Typography>
+        <Typography variant="body" color="grey600">
+          {translate('text_lago_portal_plans_intro')}
+        </Typography>
+      </div>
 
       {productKeys.map((productKey) => {
         const productPlans = plansByProduct[productKey]
         const currentForProduct = subscribedProducts.get(productKey)
 
+        const availableIntervals = INTERVAL_ORDER.filter((interval) =>
+          productPlans.some((plan) => plan.interval === interval),
+        )
+        const activeInterval =
+          selectedIntervals[productKey] ??
+          (currentForProduct?.interval && availableIntervals.includes(currentForProduct.interval)
+            ? currentForProduct.interval
+            : availableIntervals[0])
+
+        const visiblePlans = productPlans
+          .filter((plan) => plan.interval === activeInterval)
+          .sort((a, b) => a.amountCents - b.amountCents)
+
         return (
-          <div key={productKey} className="rounded-lg border border-grey-300 p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <Typography variant="headline" color="grey700">
-                {productKey.charAt(0).toUpperCase() + productKey.slice(1)}
-              </Typography>
-              {currentForProduct && (
-                <Button
-                  variant="quaternary"
-                  danger
-                  disabled={terminating}
-                  onClick={() => handleTerminate(productKey)}
-                >
-                  {translate('text_lago_portal_cancel_plan')}
-                </Button>
-              )}
+          <section key={productKey}>
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-4 pb-4 shadow-b">
+              <div className="flex flex-col gap-1">
+                <Typography variant="subhead1" color="grey700">
+                  {formatProductName(productKey)}
+                </Typography>
+
+                {currentForProduct?.planName && (
+                  <Typography variant="caption" color="grey600">
+                    {translate('text_lago_portal_current_plan')}:{' '}
+                    {formatPlanName(currentForProduct.planName)}
+                  </Typography>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                {availableIntervals.length > 1 && (
+                  <div className="flex items-center rounded-lg bg-grey-100 p-1">
+                    {availableIntervals.map((interval) => {
+                      const isActive = interval === activeInterval
+
+                      return (
+                        <button
+                          key={interval}
+                          type="button"
+                          aria-pressed={isActive}
+                          className={tw(
+                            'rounded-md px-3 py-1 text-sm font-medium transition-colors',
+                            isActive
+                              ? 'bg-white text-grey-700 shadow-sm'
+                              : 'text-grey-600 hover:text-grey-700',
+                          )}
+                          onClick={() =>
+                            setSelectedIntervals((prev) => ({ ...prev, [productKey]: interval }))
+                          }
+                        >
+                          {translate(getIntervalTranslationKey[interval])}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {currentForProduct && (
+                  <Button
+                    variant="quaternary"
+                    danger
+                    disabled={terminating}
+                    onClick={() => handleTerminate(productKey)}
+                  >
+                    {translate('text_lago_portal_cancel_plan')}
+                  </Button>
+                )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {productPlans.map((plan) => {
+            <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {visiblePlans.map((plan) => {
                 const isCurrent = currentForProduct?.planCode === plan.code
+                const { lead, features } = parseDescription(plan.description ?? '')
 
                 return (
                   <div
                     key={plan.id}
-                    className={`flex flex-col gap-3 rounded-lg border p-4 ${
-                      isCurrent ? 'bg-blue-50 border-blue-600' : 'border-grey-300'
-                    }`}
+                    className={tw(
+                      'flex h-full flex-col rounded-xl border bg-white p-6 shadow-sm transition-all duration-250',
+                      isCurrent
+                        ? 'border-blue-600 ring-1 ring-blue-600'
+                        : 'border-grey-300 hover:-translate-y-1 hover:border-grey-400 hover:shadow-lg',
+                    )}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-h-6 items-start justify-between gap-2">
                       <Typography variant="bodyHl" color="grey700">
-                        {plan.name}
+                        {formatPlanName(plan.name)}
                       </Typography>
-                      {isBundle(plan.metadata) && (
-                        <span className="bg-orange-100 text-orange-700 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
-                          {translate('text_lago_portal_bundle_badge')}
-                        </span>
+
+                      {isCurrent ? (
+                        <Chip
+                          size="small"
+                          icon="validate-filled"
+                          iconColor="success"
+                          label={translate('text_lago_portal_current_plan')}
+                        />
+                      ) : (
+                        isBundle(plan.metadata) && (
+                          <Chip size="small" label={translate('text_lago_portal_bundle_badge')} />
+                        )
                       )}
                     </div>
-                    <Typography variant="body" color="grey600">
-                      {formatPrice(plan.amountCents, plan.amountCurrency, plan.interval)}
-                    </Typography>
-                    {plan.description && (
-                      <Typography variant="caption" color="grey500">
-                        {plan.description}
+
+                    <div className="mt-4 flex items-baseline gap-1.5">
+                      <span className="font-sans text-4xl font-semibold text-grey-700">
+                        {formatPrice(plan.amountCents, plan.amountCurrency)}
+                      </span>
+
+                      <Typography variant="body" color="grey500">
+                        {`/ ${translate(getIntervalTranslationKey[plan.interval]).toLowerCase()}`}
                       </Typography>
+                    </div>
+
+                    {!!plan.description && (
+                      <>
+                        <div className="my-5 h-px bg-grey-200" />
+
+                        <Typography variant="caption" color="grey600">
+                          {lead}
+                        </Typography>
+
+                        {!!features.length && (
+                          <ul className="mt-3 flex flex-col gap-2">
+                            {features.map((feature) => (
+                              <li key={feature} className="flex items-start gap-2">
+                                <Icon
+                                  className="mt-0.5 shrink-0"
+                                  name="validate-filled"
+                                  size="small"
+                                  color="success"
+                                />
+
+                                <Typography variant="caption" color="grey700">
+                                  {feature}
+                                </Typography>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
                     )}
 
-                    {isCurrent ? (
-                      <Button variant="quaternary" disabled>
-                        {translate('text_lago_portal_current_plan')}
-                      </Button>
-                    ) : currentForProduct ? (
-                      <Button
-                        variant="primary"
-                        disabled={changing}
-                        onClick={() => handleChange(plan.code)}
-                      >
-                        {translate('text_lago_portal_switch_to_plan')}
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="primary"
-                        disabled={creating}
-                        onClick={() => handleAdd(plan.code)}
-                      >
-                        {translate('text_lago_portal_add_to_account')}
-                      </Button>
-                    )}
+                    <div className="mt-auto pt-8">
+                      {isCurrent ? (
+                        <Button variant="secondary" disabled fullWidth>
+                          {translate('text_lago_portal_current_plan')}
+                        </Button>
+                      ) : currentForProduct ? (
+                        <Button
+                          variant="secondary"
+                          disabled={changing}
+                          fullWidth
+                          onClick={() => handleChange(plan.code)}
+                        >
+                          {translate('text_lago_portal_switch_to_plan')}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          disabled={creating}
+                          fullWidth
+                          onClick={() => handleAdd(plan.code)}
+                        >
+                          {translate('text_lago_portal_add_to_account')}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )
               })}
             </div>
-          </div>
+          </section>
         )
       })}
 
